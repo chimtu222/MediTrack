@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediTrack - Medicine Inventory Management</title>
+    <link rel="icon" src="https://www.flaticon.com/free-icon-font/doctor_3914599" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+        .pulse-alert {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .email-bounce {
+            animation: emailBounce 0.6s ease-out;
+        }
+        @keyframes emailBounce {
+            0% { transform: translateY(-100px) scale(0.8); opacity: 0; }
+            50% { transform: translateY(10px) scale(1.05); opacity: 0.9; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Navigation -->
+    <nav id="navbar" class="bg-white shadow-lg border-b border-gray-200 hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-indigo-600">💊 MediTrack</h1>
+                    </div>
+                    <div class="hidden md:block ml-10">
+                        <div class="flex items-baseline space-x-4">
+                            <button onclick="showPage('dashboard')" class="nav-btn bg-indigo-100 text-indigo-700 px-3 py-2 rounded-md text-sm font-medium">Dashboard</button>
+                            <button onclick="showPage('medicines')" class="nav-btn text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Medicines</button>
+                            <button onclick="showPage('add-medicine')" class="nav-btn text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Add Medicine</button>
+                            <button onclick="showPage('reports')" class="nav-btn text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Reports</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userGreeting" class="text-gray-700 text-sm"></span>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium">Logout</button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div class="md:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50">
+                <button onclick="showPage('dashboard')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium text-indigo-700 bg-indigo-100">Dashboard</button>
+                <button onclick="showPage('medicines')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-indigo-600">Medicines</button>
+                <button onclick="showPage('add-medicine')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-indigo-600">Add Medicine</button>
+                <button onclick="showPage('reports')" class="nav-btn-mobile block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-indigo-600">Reports</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Page -->
+    <div id="loginPage" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <h2 class="text-4xl font-bold text-gray-900 mb-2">💊 MediTrack</h2>
+                <p class="text-gray-600">Medicine Inventory Management System</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-xl p-8">
+                <div class="mb-6">
+                    <div class="flex border-b">
+                        <button id="loginTab" onclick="switchTab('login')" class="flex-1 py-2 px-4 text-center font-medium text-indigo-600 border-b-2 border-indigo-600">Login</button>
+                        <button id="signupTab" onclick="switchTab('signup')" class="flex-1 py-2 px-4 text-center font-medium text-gray-500 hover:text-indigo-600">Sign Up</button>
+                    </div>
+                </div>
+                
+                <!-- Login Form -->
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <div class="flex">
+                                <select id="loginCountryCode" class="px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50">
+                                    <option value="+91">🇮🇳 +91</option>
+                                    <option value="+1">🇺🇸 +1</option>
+                                    <option value="+44">🇬🇧 +44</option>
+                                    <option value="+86">🇨🇳 +86</option>
+                                    <option value="+81">🇯🇵 +81</option>
+                                    <option value="+49">🇩🇪 +49</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                    <option value="+39">🇮🇹 +39</option>
+                                    <option value="+7">🇷🇺 +7</option>
+                                    <option value="+55">🇧🇷 +55</option>
+                                    <option value="+90">🇹🇷 +90</option>
+                                    <option value="+34">🇪🇸 +34</option>
+                                    <option value="+31">🇳🇱 +31</option>
+                                    <option value="+41">🇨🇭 +41</option>
+                                    <option value="+46">🇸🇪 +46</option>
+                                </select>
+                                <input type="tel" id="loginPhone" required class="flex-1 px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="1234567890" maxlength="10" pattern="[0-9]{10}" oninput="validatePhoneInput(this)">
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Enter 10-digit phone number</div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" id="loginPassword" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your password">
+                            <div id="loginAttempts" class="text-sm text-red-600 mt-1 hidden"></div>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-200">Login</button>
+                    </div>
+                </form>
+
+                <!-- Signup Form -->
+                <form id="signupForm" onsubmit="handleSignup(event)" class="hidden">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Shop Name</label>
+                            <input type="text" id="signupShopName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Your Medicine Shop">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Owner Name</label>
+                            <input type="text" id="signupOwnerName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Your Full Name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <input type="email" id="signupEmail" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="your.email@example.com" oninput="validateEmail()">
+                            <div id="emailValidation" class="mt-1 text-sm hidden">
+                                <div id="emailFormatCheck" class="text-red-600">✗ Valid email format required</div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <div class="flex">
+                                <select id="signupCountryCode" class="px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50">
+                                    <option value="+91">🇮🇳 +91</option>
+                                    <option value="+1">🇺🇸 +1</option>
+                                    <option value="+44">🇬🇧 +44</option>
+                                    <option value="+86">🇨🇳 +86</option>
+                                    <option value="+81">🇯🇵 +81</option>
+                                    <option value="+49">🇩🇪 +49</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                    <option value="+39">🇮🇹 +39</option>
+                                    <option value="+7">🇷🇺 +7</option>
+                                    <option value="+55">🇧🇷 +55</option>
+                                    <option value="+90">🇹🇷 +90</option>
+                                    <option value="+34">🇪🇸 +34</option>
+                                    <option value="+31">🇳🇱 +31</option>
+                                    <option value="+41">🇨🇭 +41</option>
+                                    <option value="+46">🇸🇪 +46</option>
+                                </select>
+                                <input type="tel" id="signupPhone" required class="flex-1 px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="1234567890" maxlength="10" pattern="[0-9]{10}" oninput="validatePhoneInput(this)">
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Enter 10-digit phone number</div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" id="signupPassword" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Create a strong password" oninput="validatePassword()">
+                            <div id="passwordStrength" class="mt-2 space-y-1">
+                                <div class="text-sm font-medium text-gray-700">Password Requirements:</div>
+                                <div id="lengthCheck" class="text-sm text-red-600">✗ At least 8 characters</div>
+                                <div id="uppercaseCheck" class="text-sm text-red-600">✗ One uppercase letter</div>
+                                <div id="lowercaseCheck" class="text-sm text-red-600">✗ One lowercase letter</div>
+                                <div id="numberCheck" class="text-sm text-red-600">✗ One number</div>
+                                <div id="specialCheck" class="text-sm text-red-600">✗ One special character (!@#$%^&*)</div>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200">Create Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="appContainer" class="hidden">
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+                <p class="text-gray-600">Overview of your medicine inventory</p>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                            <span class="text-2xl">💊</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Medicines</p>
+                            <p id="totalMedicines" class="text-2xl font-bold text-gray-900">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                            <span class="text-2xl">⚠️</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Expiring Soon</p>
+                            <p id="expiringSoon" class="text-2xl font-bold text-yellow-600">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-red-100 text-red-600">
+                            <span class="text-2xl">📉</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Low Stock</p>
+                            <p id="lowStock" class="text-2xl font-bold text-red-600">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-gray-100 text-gray-600">
+                            <span class="text-2xl">❌</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Expired</p>
+                            <p id="expiredCount" class="text-2xl font-bold text-gray-600">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div id="alertsSection" class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">🚨 Alerts</h2>
+                <div id="alertsList" class="space-y-3">
+                    <!-- Alerts will be populated here -->
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">📈 Recent Activity</h2>
+                <div id="recentActivity" class="space-y-3">
+                    <!-- Recent activity will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Medicines List Page -->
+        <div id="medicinesPage" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Medicine Inventory</h1>
+                <p class="text-gray-600">Manage your medicine stock</p>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                        <input type="text" id="searchInput" placeholder="Search medicines..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" oninput="filterMedicines()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+                        <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" onchange="filterMedicines()">
+                            <option value="">All</option>
+                            <option value="expiring">Expiring Soon</option>
+                            <option value="expired">Expired</option>
+                            <option value="low-stock">Low Stock</option>
+                            <option value="out-of-stock">Out of Stock</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sort by</label>
+                        <select id="sortBy" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" onchange="filterMedicines()">
+                            <option value="name-asc">Name (A-Z)</option>
+                            <option value="name-desc">Name (Z-A)</option>
+                            <option value="expiry-asc">Expiry (Nearest)</option>
+                            <option value="expiry-desc">Expiry (Farthest)</option>
+                            <option value="quantity-asc">Quantity (Low to High)</option>
+                            <option value="quantity-desc">Quantity (High to Low)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="clearFilters()" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium">Clear Filters</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medicines Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medicine</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="medicinesTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Medicines will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Medicine Page -->
+        <div id="add-medicinePage" class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Add New Medicine</h1>
+                <p class="text-gray-600">Add medicine to your inventory</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <form id="addMedicineForm" onsubmit="handleAddMedicine(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Medicine Name *</label>
+                            <input type="text" id="medicineName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter medicine name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                            <input type="number" id="medicineQuantity" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter quantity">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
+                            <input type="date" id="medicineExpiry" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Price per Unit</label>
+                            <input type="number" id="medicinePrice" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter price">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Batch Number</label>
+                            <input type="text" id="medicineBatch" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter batch number">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                            <input type="text" id="medicineSupplier" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter supplier name">
+                        </div>
+                    </div>
+                    <div class="mt-6 flex space-x-4">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md font-medium">Add Medicine</button>
+                        <button type="button" onclick="clearAddForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium">Clear Form</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div id="reportsPage" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Reports</h1>
+                <p class="text-gray-600">Generate and download inventory reports</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Report Generation -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">Generate Report</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
+                            <select id="reportType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="inventory">Full Inventory</option>
+                                <option value="expiring">Expiring Soon</option>
+                                <option value="expired">Expired Medicines</option>
+                                <option value="low-stock">Low Stock</option>
+                                <option value="sales">Sales Summary</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="date" id="reportStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="date" id="reportEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                        <div class="flex space-x-3">
+                            <button onclick="downloadPDF()" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium">📄 Download PDF</button>
+                            <button onclick="downloadExcel()" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium">📊 Download Excel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Statistics</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Total Value of Inventory:</span>
+                            <span id="totalValue" class="font-bold text-green-600">$0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Medicines Added This Month:</span>
+                            <span id="addedThisMonth" class="font-bold text-blue-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Medicines Sold This Month:</span>
+                            <span id="soldThisMonth" class="font-bold text-indigo-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Average Days to Expiry:</span>
+                            <span id="avgDaysToExpiry" class="font-bold text-yellow-600">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Medicine Modal -->
+    <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-900">Edit Medicine</h2>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+            <form id="editMedicineForm" onsubmit="handleEditMedicine(event)">
+                <input type="hidden" id="editMedicineId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Medicine Name *</label>
+                        <input type="text" id="editMedicineName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                        <input type="number" id="editMedicineQuantity" required min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
+                        <input type="date" id="editMedicineExpiry" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Price per Unit</label>
+                        <input type="number" id="editMedicinePrice" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Batch Number</label>
+                        <input type="text" id="editMedicineBatch" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                        <input type="text" id="editMedicineSupplier" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div class="mt-6 flex space-x-4">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md font-medium">Update Medicine</button>
+                    <button type="button" onclick="closeEditModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sale Medicine Modal -->
+    <div id="saleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-900">Record Sale</h2>
+                <button onclick="closeSaleModal()" class="text-gray-400 hover:text-gray-600">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+            <form id="saleForm" onsubmit="handleSale(event)">
+                <input type="hidden" id="saleMedicineId">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Medicine Name</label>
+                        <input type="text" id="saleMedicineName" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Available Quantity</label>
+                        <input type="text" id="saleAvailableQuantity" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantity to Sell *</label>
+                        <input type="number" id="saleQuantity" required min="1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div class="mt-6 flex space-x-4">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium">Record Sale</button>
+                    <button type="button" onclick="closeSaleModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-medium">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hidden z-50">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let medicines = [];
+        let sales = [];
+        let currentPage = 'dashboard';
+
+        // Phone validation function
+        function validatePhoneInput(input) {
+            // Remove any non-digit characters
+            input.value = input.value.replace(/\D/g, '');
+            
+            // Limit to 10 digits
+            if (input.value.length > 10) {
+                input.value = input.value.slice(0, 10);
+            }
+        }
+
+        // Email validation function with stricter rules
+        function validateEmail() {
+            const email = document.getElementById('signupEmail').value;
+            const emailValidation = document.getElementById('emailValidation');
+            const emailFormatCheck = document.getElementById('emailFormatCheck');
+            
+            // Strict email validation - requires proper domain with at least 2 characters after final dot
+            const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+            
+            if (email.length === 0) {
+                emailValidation.classList.add('hidden');
+                return false;
+            }
+            
+            emailValidation.classList.remove('hidden');
+            
+            const isValidFormat = emailRegex.test(email);
+            
+            if (isValidFormat) {
+                emailFormatCheck.className = 'text-green-600';
+                emailFormatCheck.textContent = '✓ Valid email format';
+                return true;
+            } else {
+                emailFormatCheck.className = 'text-red-600';
+                emailFormatCheck.textContent = '✗ Valid email format required (e.g., user@domain.com)';
+                return false;
+            }
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+            checkAuth();
+            setDefaultDates();
+        });
+
+        // Authentication functions
+        function switchTab(tab) {
+            const loginTab = document.getElementById('loginTab');
+            const signupTab = document.getElementById('signupTab');
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+
+            if (tab === 'login') {
+                loginTab.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                loginTab.classList.remove('text-gray-500');
+                signupTab.classList.add('text-gray-500');
+                signupTab.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+            } else {
+                signupTab.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                signupTab.classList.remove('text-gray-500');
+                loginTab.classList.add('text-gray-500');
+                loginTab.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
+                signupForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const countryCode = document.getElementById('loginCountryCode').value;
+            const phoneNumber = document.getElementById('loginPhone').value;
+            const password = document.getElementById('loginPassword').value;
+
+            // Validate phone number
+            if (!/^\d{10}$/.test(phoneNumber)) {
+                showToast('Please enter a valid 10-digit phone number', 'error');
+                return;
+            }
+
+            const fullPhone = countryCode + phoneNumber;
+
+            // Check if account is frozen
+            const freezeData = JSON.parse(localStorage.getItem(`meditrack_freeze_${fullPhone}`) || '{}');
+            if (freezeData.frozenUntil && new Date() < new Date(freezeData.frozenUntil)) {
+                showToast(`Account is frozen due to suspicious activity`, 'error');
+                startFreezeCountdown(fullPhone);
+                return;
+            }
+
+            // Get users from localStorage
+            const users = JSON.parse(localStorage.getItem('meditrack_users') || '[]');
+            const user = users.find(u => u.phone === fullPhone && u.password === password);
+
+            if (user) {
+                // Reset login attempts on successful login
+                localStorage.removeItem(`meditrack_attempts_${fullPhone}`);
+                localStorage.removeItem(`meditrack_freeze_${fullPhone}`);
+                document.getElementById('loginAttempts').classList.add('hidden');
+                
+                currentUser = user;
+                localStorage.setItem('meditrack_current_user', JSON.stringify(user));
+                showApp();
+                showToast('Login successful!', 'success');
+            } else {
+                handleFailedLogin(fullPhone);
+            }
+        }
+
+        function handleFailedLogin(phone) {
+            const attemptsKey = `meditrack_attempts_${phone}`;
+            const attempts = JSON.parse(localStorage.getItem(attemptsKey) || '{"count": 0, "lastAttempt": null}');
+            
+            attempts.count++;
+            attempts.lastAttempt = new Date().toISOString();
+            
+            localStorage.setItem(attemptsKey, JSON.stringify(attempts));
+            
+            const remainingAttempts = 5 - attempts.count;
+            
+            if (attempts.count >= 5) {
+                // Freeze account for 20 minutes
+                const freezeUntil = new Date(Date.now() + 20 * 60 * 1000);
+                localStorage.setItem(`meditrack_freeze_${phone}`, JSON.stringify({
+                    frozenUntil: freezeUntil.toISOString(),
+                    reason: 'Multiple failed login attempts'
+                }));
+                
+                // Send security alert
+                sendSecurityAlert(phone);
+                
+                showToast('Account frozen for 20 minutes due to multiple failed attempts. Security alerts sent!', 'error');
+                
+                // Start countdown timer
+                startFreezeCountdown(phone);
+            } else {
+                showToast(`Invalid credentials. ${remainingAttempts} attempts remaining`, 'error');
+                document.getElementById('loginAttempts').textContent = `${remainingAttempts} attempts remaining before account freeze`;
+                document.getElementById('loginAttempts').classList.remove('hidden');
+            }
+        }
+
+        function sendSecurityAlert(phone) {
+            // Get user email from stored users
+            const users = JSON.parse(localStorage.getItem('meditrack_users') || '[]');
+            const user = users.find(u => u.phone === phone);
+            
+            if (!user || !user.email) {
+                console.log('No email found for user');
+                return;
+            }
+
+            // Show comprehensive security warning popup immediately
+            const warningPopup = document.createElement('div');
+            warningPopup.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            warningPopup.innerHTML = `
+                <div class="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 overflow-hidden email-bounce">
+                    <!-- Warning Header -->
+                    <div class="bg-red-600 px-6 py-4 text-white">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">🚨</span>
+                            <div>
+                                <h2 class="text-xl font-bold">SECURITY ALERT</h2>
+                                <p class="text-red-100 text-sm">Account Protection Activated</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Warning Content -->
+                    <div class="p-6">
+                        <div class="text-center mb-6">
+                            <div class="text-6xl mb-4">⚠️</div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Account Temporarily Frozen</h3>
+                            <p class="text-gray-600">Multiple failed login attempts detected</p>
+                        </div>
+                        
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                            <h4 class="font-semibold text-yellow-800 mb-2">🔒 Security Measures Activated:</h4>
+                            <ul class="text-yellow-700 text-sm space-y-1">
+                                <li>• Account frozen for 20 minutes</li>
+                                <li>• Email alert sent to: <strong>${user.email}</strong></li>
+                                <li>• SMS alert sent to: <strong>${phone}</strong></li>
+                                <li>• All login attempts are being logged</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <h4 class="font-semibold text-red-800 mb-2">⚠️ WARNING TO UNAUTHORIZED USERS:</h4>
+                            <p class="text-red-700 text-sm">
+                                This account is protected by advanced security monitoring. 
+                                Continued unauthorized access attempts will result in:
+                            </p>
+                            <ul class="text-red-700 text-sm mt-2 space-y-1">
+                                <li>• Extended account lockout periods</li>
+                                <li>• IP address tracking and reporting</li>
+                                <li>• Automatic notification to account owner</li>
+                                <li>• Potential legal action for unauthorized access</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <h4 class="font-semibold text-blue-800 mb-2">📱 Notifications Sent:</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-green-600">✓</span>
+                                    <span class="text-blue-700">Email sent to ${user.email}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-green-600">✓</span>
+                                    <span class="text-blue-700">SMS sent to ${phone}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-green-600">✓</span>
+                                    <span class="text-blue-700">Security log updated</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium">
+                                Acknowledge Warning
+                            </button>
+                        </div>
+                        
+                        <p class="text-xs text-gray-500 text-center mt-4">
+                            If you are the account owner, please wait 20 minutes before trying again.
+                        </p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(warningPopup);
+            
+            // Auto-remove after 30 seconds if not acknowledged
+            setTimeout(() => {
+                if (warningPopup.parentElement) {
+                    warningPopup.remove();
+                }
+            }, 30000);
+        }
+
+        function startFreezeCountdown(phone) {
+            const freezeData = JSON.parse(localStorage.getItem(`meditrack_freeze_${phone}`) || '{}');
+            if (!freezeData.frozenUntil) return;
+
+            const loginAttemptsElement = document.getElementById('loginAttempts');
+            
+            const updateCountdown = () => {
+                const now = new Date();
+                const freezeUntil = new Date(freezeData.frozenUntil);
+                const remainingMs = freezeUntil - now;
+                
+                if (remainingMs <= 0) {
+                    // Account is no longer frozen
+                    localStorage.removeItem(`meditrack_freeze_${phone}`);
+                    localStorage.removeItem(`meditrack_attempts_${phone}`);
+                    loginAttemptsElement.classList.add('hidden');
+                    showToast('Account unfrozen! You can now try logging in again.', 'success');
+                    return;
+                }
+                
+                const minutes = Math.floor(remainingMs / 60000);
+                const seconds = Math.floor((remainingMs % 60000) / 1000);
+                
+                loginAttemptsElement.textContent = `Account frozen for ${minutes}:${seconds.toString().padStart(2, '0')} minutes`;
+                loginAttemptsElement.classList.remove('hidden');
+                
+                // Continue countdown
+                setTimeout(updateCountdown, 1000);
+            };
+            
+            updateCountdown();
+        }
+
+        function validatePassword() {
+            const password = document.getElementById('signupPassword').value;
+            
+            // Check each requirement
+            const hasLength = password.length >= 8;
+            const hasUppercase = /[A-Z]/.test(password);
+            const hasLowercase = /[a-z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            
+            // Update UI indicators
+            updatePasswordCheck('lengthCheck', hasLength, 'At least 8 characters');
+            updatePasswordCheck('uppercaseCheck', hasUppercase, 'One uppercase letter');
+            updatePasswordCheck('lowercaseCheck', hasLowercase, 'One lowercase letter');
+            updatePasswordCheck('numberCheck', hasNumber, 'One number');
+            updatePasswordCheck('specialCheck', hasSpecial, 'One special character (!@#$%^&*)');
+            
+            return hasLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
+        }
+
+        function updatePasswordCheck(elementId, isValid, text) {
+            const element = document.getElementById(elementId);
+            if (isValid) {
+                element.className = 'text-sm text-green-600';
+                element.textContent = '✓ ' + text;
+            } else {
+                element.className = 'text-sm text-red-600';
+                element.textContent = '✗ ' + text;
+            }
+        }
+
+        function handleSignup(event) {
+            event.preventDefault();
+            const shopName = document.getElementById('signupShopName').value.trim();
+            const ownerName = document.getElementById('signupOwnerName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const countryCode = document.getElementById('signupCountryCode').value;
+            const phoneNumber = document.getElementById('signupPhone').value;
+            const password = document.getElementById('signupPassword').value;
+
+            // Validate phone number
+            if (!/^\d{10}$/.test(phoneNumber)) {
+                showToast('Please enter a valid 10-digit phone number', 'error');
+                return;
+            }
+
+            // Validate email format
+            if (!validateEmail()) {
+                showToast('Please enter a valid email address', 'error');
+                return;
+            }
+
+            // Validate password strength
+            if (!validatePassword()) {
+                showToast('Please meet all password requirements', 'error');
+                return;
+            }
+
+            const fullPhone = countryCode + phoneNumber;
+
+            // Get existing users
+            const users = JSON.parse(localStorage.getItem('meditrack_users') || '[]');
+            
+            // Check if phone number already exists
+            const existingUser = users.find(u => u.phone === fullPhone);
+            if (existingUser) {
+                showToast('An account with this phone number already exists', 'error');
+                return;
+            }
+
+            // Check if email already exists
+            const existingEmail = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (existingEmail) {
+                showToast('An account with this email address already exists', 'error');
+                return;
+            }
+
+            // Create new user
+            const newUser = {
+                id: Date.now().toString(),
+                shopName,
+                ownerName,
+                email,
+                phone: fullPhone,
+                password,
+                createdAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('meditrack_users', JSON.stringify(users));
+            
+            currentUser = newUser;
+            localStorage.setItem('meditrack_current_user', JSON.stringify(newUser));
+            
+            showApp();
+            showToast('Account created successfully! Security monitoring is now active.', 'success');
+        }
+
+        function checkAuth() {
+            const savedUser = localStorage.getItem('meditrack_current_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showApp();
+            }
+        }
+
+        function showApp() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
+            document.getElementById('navbar').classList.remove('hidden');
+            
+            // Update user greeting
+            document.getElementById('userGreeting').textContent = `Welcome, ${currentUser.ownerName}`;
+            
+            loadUserData();
+            showPage('dashboard');
+        }
+
+        function logout() {
+            localStorage.removeItem('meditrack_current_user');
+            currentUser = null;
+            medicines = [];
+            sales = [];
+            
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('navbar').classList.add('hidden');
+            
+            // Reset forms
+            document.getElementById('loginForm').reset();
+            document.getElementById('signupForm').reset();
+            document.getElementById('loginAttempts').classList.add('hidden');
+            switchTab('login');
+        }
+
+        // Navigation functions
+        function showPage(page) {
+            // Hide all pages
+            const pages = ['dashboardPage', 'medicinesPage', 'add-medicinePage', 'reportsPage'];
+            pages.forEach(p => document.getElementById(p).classList.add('hidden'));
+            
+            // Show selected page
+            document.getElementById(page + 'Page').classList.remove('hidden');
+            
+            // Update navigation
+            updateNavigation(page);
+            currentPage = page;
+            
+            // Load page-specific data
+            if (page === 'dashboard') {
+                updateDashboard();
+            } else if (page === 'medicines') {
+                displayMedicines();
+            } else if (page === 'add-medicine') {
+                // Add medicine page loaded
+            } else if (page === 'reports') {
+                updateReportsStats();
+            }
+        }
+
+        function updateNavigation(activePage) {
+            // Desktop navigation
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => {
+                btn.classList.remove('bg-indigo-100', 'text-indigo-700');
+                btn.classList.add('text-gray-600', 'hover:text-indigo-600');
+            });
+            
+            // Mobile navigation
+            const mobileNavButtons = document.querySelectorAll('.nav-btn-mobile');
+            mobileNavButtons.forEach(btn => {
+                btn.classList.remove('bg-indigo-100', 'text-indigo-700');
+                btn.classList.add('text-gray-600', 'hover:text-indigo-600');
+            });
+            
+            // Highlight active page
+            const activeBtn = document.querySelector(`[onclick="showPage('${activePage}')"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-indigo-100', 'text-indigo-700');
+                activeBtn.classList.remove('text-gray-600', 'hover:text-indigo-600');
+            }
+        }
+
+        // Data management functions
+        function loadUserData() {
+            if (!currentUser) return;
+            
+            const userMedicines = localStorage.getItem(`meditrack_medicines_${currentUser.id}`);
+            const userSales = localStorage.getItem(`meditrack_sales_${currentUser.id}`);
+            
+            medicines = userMedicines ? JSON.parse(userMedicines) : [];
+            sales = userSales ? JSON.parse(userSales) : [];
+        }
+
+        function saveUserData() {
+            if (!currentUser) return;
+            
+            localStorage.setItem(`meditrack_medicines_${currentUser.id}`, JSON.stringify(medicines));
+            localStorage.setItem(`meditrack_sales_${currentUser.id}`, JSON.stringify(sales));
+        }
+
+        // Medicine management functions
+        function handleAddMedicine(event) {
+            event.preventDefault();
+            
+            const medicine = {
+                id: Date.now().toString(),
+                name: document.getElementById('medicineName').value,
+                quantity: parseInt(document.getElementById('medicineQuantity').value),
+                expiry: document.getElementById('medicineExpiry').value,
+                price: parseFloat(document.getElementById('medicinePrice').value) || 0,
+                batch: document.getElementById('medicineBatch').value,
+                supplier: document.getElementById('medicineSupplier').value,
+                addedAt: new Date().toISOString(),
+                isOutOfStock: false
+            };
+            
+            medicines.push(medicine);
+            saveUserData();
+            
+            document.getElementById('addMedicineForm').reset();
+            showToast('Medicine added successfully!', 'success');
+            
+            // Update dashboard if it's the current page
+            if (currentPage === 'dashboard') {
+                updateDashboard();
+            }
+        }
+
+        function clearAddForm() {
+            document.getElementById('addMedicineForm').reset();
+        }
+
+        function editMedicine(id) {
+            const medicine = medicines.find(m => m.id === id);
+            if (!medicine) return;
+            
+            document.getElementById('editMedicineId').value = medicine.id;
+            document.getElementById('editMedicineName').value = medicine.name;
+            document.getElementById('editMedicineQuantity').value = medicine.quantity;
+            document.getElementById('editMedicineExpiry').value = medicine.expiry;
+            document.getElementById('editMedicinePrice').value = medicine.price;
+            document.getElementById('editMedicineBatch').value = medicine.batch;
+            document.getElementById('editMedicineSupplier').value = medicine.supplier;
+            
+            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').classList.add('flex');
+        }
+
+        function handleEditMedicine(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('editMedicineId').value;
+            const medicineIndex = medicines.findIndex(m => m.id === id);
+            
+            if (medicineIndex !== -1) {
+                medicines[medicineIndex] = {
+                    ...medicines[medicineIndex],
+                    name: document.getElementById('editMedicineName').value,
+                    quantity: parseInt(document.getElementById('editMedicineQuantity').value),
+                    expiry: document.getElementById('editMedicineExpiry').value,
+                    price: parseFloat(document.getElementById('editMedicinePrice').value) || 0,
+                    batch: document.getElementById('editMedicineBatch').value,
+                    supplier: document.getElementById('editMedicineSupplier').value,
+                    isOutOfStock: parseInt(document.getElementById('editMedicineQuantity').value) === 0
+                };
+                
+                saveUserData();
+                closeEditModal();
+                displayMedicines();
+                updateDashboard();
+                showToast('Medicine updated successfully!', 'success');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editModal').classList.remove('flex');
+        }
+
+        function deleteMedicine(id) {
+            if (confirm('Are you sure you want to delete this medicine?')) {
+                medicines = medicines.filter(m => m.id !== id);
+                saveUserData();
+                displayMedicines();
+                updateDashboard();
+                showToast('Medicine deleted successfully!', 'success');
+            }
+        }
+
+        function toggleOutOfStock(id) {
+            const medicineIndex = medicines.findIndex(m => m.id === id);
+            if (medicineIndex !== -1) {
+                medicines[medicineIndex].isOutOfStock = !medicines[medicineIndex].isOutOfStock;
+                saveUserData();
+                displayMedicines();
+                updateDashboard();
+                showToast('Medicine status updated!', 'success');
+            }
+        }
+
+        function openSaleModal(id) {
+            const medicine = medicines.find(m => m.id === id);
+            if (!medicine) return;
+            
+            document.getElementById('saleMedicineId').value = medicine.id;
+            document.getElementById('saleMedicineName').value = medicine.name;
+            document.getElementById('saleAvailableQuantity').value = medicine.quantity;
+            document.getElementById('saleQuantity').value = '';
+            document.getElementById('saleQuantity').max = medicine.quantity;
+            
+            document.getElementById('saleModal').classList.remove('hidden');
+            document.getElementById('saleModal').classList.add('flex');
+        }
+
+        function handleSale(event) {
+            event.preventDefault();
+            
+            const medicineId = document.getElementById('saleMedicineId').value;
+            const saleQuantity = parseInt(document.getElementById('saleQuantity').value);
+            
+            const medicineIndex = medicines.findIndex(m => m.id === medicineId);
+            if (medicineIndex === -1) return;
+            
+            const medicine = medicines[medicineIndex];
+            
+            if (saleQuantity > medicine.quantity) {
+                showToast('Sale quantity cannot exceed available quantity', 'error');
+                return;
+            }
+            
+            // Record sale
+            const sale = {
+                id: Date.now().toString(),
+                medicineId: medicineId,
+                medicineName: medicine.name,
+                quantity: saleQuantity,
+                price: medicine.price,
+                total: medicine.price * saleQuantity,
+                date: new Date().toISOString()
+            };
+            
+            sales.push(sale);
+            
+            // Update medicine quantity
+            medicines[medicineIndex].quantity -= saleQuantity;
+            if (medicines[medicineIndex].quantity === 0) {
+                medicines[medicineIndex].isOutOfStock = true;
+            }
+            
+            saveUserData();
+            closeSaleModal();
+            displayMedicines();
+            updateDashboard();
+            showToast(`Sale recorded: ${saleQuantity} units of ${medicine.name}`, 'success');
+        }
+
+        function closeSaleModal() {
+            document.getElementById('saleModal').classList.add('hidden');
+            document.getElementById('saleModal').classList.remove('flex');
+        }
+
+        // Display functions
+        function displayMedicines() {
+            const tbody = document.getElementById('medicinesTableBody');
+            const filteredMedicines = getFilteredMedicines();
+            
+            if (filteredMedicines.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No medicines found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filteredMedicines.map(medicine => {
+                const status = getMedicineStatus(medicine);
+                const statusClass = getStatusClass(status);
+                
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${medicine.name}</div>
+                            ${medicine.batch ? `<div class="text-sm text-gray-500">Batch: ${medicine.batch}</div>` : ''}
+                            ${medicine.supplier ? `<div class="text-sm text-gray-500">Supplier: ${medicine.supplier}</div>` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${medicine.quantity}</div>
+                            ${medicine.price > 0 ? `<div class="text-sm text-gray-500">₹${medicine.price}/unit</div>` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${formatDate(medicine.expiry)}</div>
+                            <div class="text-sm text-gray-500">${getDaysToExpiry(medicine.expiry)} days</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                ${status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <button onclick="editMedicine('${medicine.id}')" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                            ${medicine.quantity > 0 && !medicine.isOutOfStock ? 
+                                `<button onclick="openSaleModal('${medicine.id}')" class="text-green-600 hover:text-green-900">Sell</button>` : ''}
+                            <button onclick="toggleOutOfStock('${medicine.id}')" class="text-yellow-600 hover:text-yellow-900">
+                                ${medicine.isOutOfStock ? 'Mark Available' : 'Mark Out of Stock'}
+                            </button>
+                            <button onclick="deleteMedicine('${medicine.id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getFilteredMedicines() {
+            let filtered = [...medicines];
+            
+            // Search filter
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(m => 
+                    m.name.toLowerCase().includes(searchTerm) ||
+                    m.batch.toLowerCase().includes(searchTerm) ||
+                    m.supplier.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Status filter
+            const statusFilter = document.getElementById('statusFilter').value;
+            if (statusFilter) {
+                filtered = filtered.filter(m => {
+                    const status = getMedicineStatus(m);
+                    switch (statusFilter) {
+                        case 'expiring': return status === 'Expiring Soon';
+                        case 'expired': return status === 'Expired';
+                        case 'low-stock': return status === 'Low Stock';
+                        case 'out-of-stock': return status === 'Out of Stock';
+                        default: return true;
+                    }
+                });
+            }
+            
+            // Sort
+            const sortBy = document.getElementById('sortBy').value;
+            filtered.sort((a, b) => {
+                switch (sortBy) {
+                    case 'name-asc': return a.name.localeCompare(b.name);
+                    case 'name-desc': return b.name.localeCompare(a.name);
+                    case 'expiry-asc': return new Date(a.expiry) - new Date(b.expiry);
+                    case 'expiry-desc': return new Date(b.expiry) - new Date(a.expiry);
+                    case 'quantity-asc': return a.quantity - b.quantity;
+                    case 'quantity-desc': return b.quantity - a.quantity;
+                    default: return 0;
+                }
+            });
+            
+            return filtered;
+        }
+
+        function filterMedicines() {
+            displayMedicines();
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('sortBy').value = 'name-asc';
+            displayMedicines();
+        }
+
+        // Dashboard functions
+        function updateDashboard() {
+            const stats = calculateStats();
+            
+            document.getElementById('totalMedicines').textContent = stats.total;
+            document.getElementById('expiringSoon').textContent = stats.expiringSoon;
+            document.getElementById('lowStock').textContent = stats.lowStock;
+            document.getElementById('expiredCount').textContent = stats.expired;
+            
+            updateAlerts();
+            updateRecentActivity();
+        }
+
+        function calculateStats() {
+            const now = new Date();
+            const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            
+            return {
+                total: medicines.length,
+                expiringSoon: medicines.filter(m => {
+                    const expiry = new Date(m.expiry);
+                    return expiry <= thirtyDaysFromNow && expiry > now;
+                }).length,
+                lowStock: medicines.filter(m => m.quantity <= 10 && m.quantity > 0).length,
+                expired: medicines.filter(m => new Date(m.expiry) <= now).length
+            };
+        }
+
+        function updateAlerts() {
+            const alertsList = document.getElementById('alertsList');
+            const alerts = [];
+            
+            // Expired medicines
+            const expired = medicines.filter(m => new Date(m.expiry) <= new Date());
+            expired.forEach(m => {
+                alerts.push({
+                    type: 'error',
+                    message: `${m.name} has expired (${formatDate(m.expiry)})`,
+                    icon: '❌'
+                });
+            });
+            
+            // Expiring soon
+            const expiringSoon = medicines.filter(m => {
+                const expiry = new Date(m.expiry);
+                const now = new Date();
+                const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                return expiry <= thirtyDaysFromNow && expiry > now;
+            });
+            expiringSoon.forEach(m => {
+                alerts.push({
+                    type: 'warning',
+                    message: `${m.name} expires in ${getDaysToExpiry(m.expiry)} days`,
+                    icon: '⚠️'
+                });
+            });
+            
+            // Low stock
+            const lowStock = medicines.filter(m => m.quantity <= 10 && m.quantity > 0);
+            lowStock.forEach(m => {
+                alerts.push({
+                    type: 'info',
+                    message: `${m.name} is running low (${m.quantity} units left)`,
+                    icon: '📉'
+                });
+            });
+            
+            if (alerts.length === 0) {
+                alertsList.innerHTML = '<div class="text-green-600 text-center py-4">✅ No alerts at this time</div>';
+            } else {
+                alertsList.innerHTML = alerts.slice(0, 5).map(alert => {
+                    const bgColor = alert.type === 'error' ? 'bg-red-50 border-red-200' : 
+                                   alert.type === 'warning' ? 'bg-yellow-50 border-yellow-200' : 
+                                   'bg-blue-50 border-blue-200';
+                    const textColor = alert.type === 'error' ? 'text-red-800' : 
+                                     alert.type === 'warning' ? 'text-yellow-800' : 
+                                     'text-blue-800';
+                    
+                    return `
+                        <div class="flex items-center p-3 ${bgColor} border rounded-lg ${alert.type === 'error' ? 'pulse-alert' : ''}">
+                            <span class="text-xl mr-3">${alert.icon}</span>
+                            <span class="${textColor}">${alert.message}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function updateRecentActivity() {
+            const recentActivity = document.getElementById('recentActivity');
+            const recentSales = sales.slice(-5).reverse();
+            const recentMedicines = medicines.slice(-5).reverse();
+            
+            const activities = [];
+            
+            recentSales.forEach(sale => {
+                activities.push({
+                    type: 'sale',
+                    message: `Sold ${sale.quantity} units of ${sale.medicineName}`,
+                    date: sale.date,
+                    icon: '💰'
+                });
+            });
+            
+            recentMedicines.forEach(medicine => {
+                activities.push({
+                    type: 'addition',
+                    message: `Added ${medicine.name} to inventory`,
+                    date: medicine.addedAt,
+                    icon: '➕'
+                });
+            });
+            
+            // Sort by date
+            activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            if (activities.length === 0) {
+                recentActivity.innerHTML = '<div class="text-gray-500 text-center py-4">No recent activity</div>';
+            } else {
+                recentActivity.innerHTML = activities.slice(0, 5).map(activity => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="text-xl mr-3">${activity.icon}</span>
+                            <span class="text-gray-800">${activity.message}</span>
+                        </div>
+                        <span class="text-sm text-gray-500">${formatDateTime(activity.date)}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Reports functions
+        function updateReportsStats() {
+            const totalValue = medicines.reduce((sum, m) => sum + (m.price * m.quantity), 0);
+            const thisMonth = new Date();
+            thisMonth.setDate(1);
+            
+            const addedThisMonth = medicines.filter(m => new Date(m.addedAt) >= thisMonth).length;
+            const soldThisMonth = sales.filter(s => new Date(s.date) >= thisMonth)
+                .reduce((sum, s) => sum + s.quantity, 0);
+            
+            const avgDaysToExpiry = medicines.length > 0 ? 
+                Math.round(medicines.reduce((sum, m) => sum + getDaysToExpiry(m.expiry), 0) / medicines.length) : 0;
+            
+            document.getElementById('totalValue').textContent = `₹${totalValue.toFixed(2)}`;
+            document.getElementById('addedThisMonth').textContent = addedThisMonth;
+            document.getElementById('soldThisMonth').textContent = soldThisMonth;
+            document.getElementById('avgDaysToExpiry').textContent = avgDaysToExpiry;
+        }
+
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('reportStartDate').value = firstDayOfMonth.toISOString().split('T')[0];
+            document.getElementById('reportEndDate').value = today.toISOString().split('T')[0];
+        }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const reportType = document.getElementById('reportType').value;
+            const startDate = document.getElementById('reportStartDate').value;
+            const endDate = document.getElementById('reportEndDate').value;
+            
+            // Add title
+            doc.setFontSize(20);
+            doc.text('MediTrack Report', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Shop: ${currentUser.shopName}`, 20, 35);
+            doc.text(`Owner: ${currentUser.ownerName}`, 20, 45);
+            doc.text(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`, 20, 55);
+            doc.text(`Date Range: ${startDate} to ${endDate}`, 20, 65);
+            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 75);
+            
+            let yPosition = 90;
+            
+            // Get data based on report type
+            let data = getReportData(reportType, startDate, endDate);
+            
+            if (reportType === 'sales') {
+                doc.text('Sales Summary:', 20, yPosition);
+                yPosition += 15;
+                
+                data.forEach(sale => {
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(`${formatDate(sale.date)} - ${sale.medicineName} - Qty: ${sale.quantity} - Total: ₹${sale.total.toFixed(2)}`, 20, yPosition);
+                    yPosition += 10;
+                });
+            } else {
+                doc.text('Medicine Inventory:', 20, yPosition);
+                yPosition += 15;
+                
+                data.forEach(medicine => {
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(`${medicine.name} - Qty: ${medicine.quantity} - Expiry: ${formatDate(medicine.expiry)} - Status: ${getMedicineStatus(medicine)}`, 20, yPosition);
+                    yPosition += 10;
+                });
+            }
+            
+            doc.save(`meditrack-${reportType}-report.pdf`);
+            showToast('PDF report downloaded successfully!', 'success');
+        }
+
+        function downloadExcel() {
+            const reportType = document.getElementById('reportType').value;
+            const startDate = document.getElementById('reportStartDate').value;
+            const endDate = document.getElementById('reportEndDate').value;
+            
+            let data = getReportData(reportType, startDate, endDate);
+            let worksheet;
+            
+            if (reportType === 'sales') {
+                worksheet = XLSX.utils.json_to_sheet(data.map(sale => ({
+                    'Date': formatDate(sale.date),
+                    'Medicine': sale.medicineName,
+                    'Quantity': sale.quantity,
+                    'Price per Unit': sale.price,
+                    'Total': sale.total
+                })));
+            } else {
+                worksheet = XLSX.utils.json_to_sheet(data.map(medicine => ({
+                    'Medicine Name': medicine.name,
+                    'Quantity': medicine.quantity,
+                    'Expiry Date': formatDate(medicine.expiry),
+                    'Price per Unit': medicine.price,
+                    'Batch Number': medicine.batch,
+                    'Supplier': medicine.supplier,
+                    'Status': getMedicineStatus(medicine)
+                })));
+            }
+            
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, reportType.charAt(0).toUpperCase() + reportType.slice(1));
+            
+            XLSX.writeFile(workbook, `meditrack-${reportType}-report.xlsx`);
+            showToast('Excel report downloaded successfully!', 'success');
+        }
+
+        function getReportData(reportType, startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            
+            switch (reportType) {
+                case 'inventory':
+                    return medicines;
+                case 'expiring':
+                    const thirtyDaysFromNow = new Date();
+                    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+                    return medicines.filter(m => {
+                        const expiry = new Date(m.expiry);
+                        return expiry <= thirtyDaysFromNow && expiry > new Date();
+                    });
+                case 'expired':
+                    return medicines.filter(m => new Date(m.expiry) <= new Date());
+                case 'low-stock':
+                    return medicines.filter(m => m.quantity <= 10 && m.quantity > 0);
+                case 'sales':
+                    return sales.filter(s => {
+                        const saleDate = new Date(s.date);
+                        return saleDate >= start && saleDate <= end;
+                    });
+                default:
+                    return medicines;
+            }
+        }
+
+        // Utility functions
+        function getMedicineStatus(medicine) {
+            if (medicine.isOutOfStock || medicine.quantity === 0) return 'Out of Stock';
+            
+            const expiry = new Date(medicine.expiry);
+            const now = new Date();
+            const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            
+            if (expiry <= now) return 'Expired';
+            if (expiry <= thirtyDaysFromNow) return 'Expiring Soon';
+            if (medicine.quantity <= 10) return 'Low Stock';
+            
+            return 'In Stock';
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'In Stock': return 'bg-green-100 text-green-800';
+                case 'Low Stock': return 'bg-yellow-100 text-yellow-800';
+                case 'Expiring Soon': return 'bg-orange-100 text-orange-800';
+                case 'Expired': return 'bg-red-100 text-red-800';
+                case 'Out of Stock': return 'bg-gray-100 text-gray-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getDaysToExpiry(expiryDate) {
+            const expiry = new Date(expiryDate);
+            const now = new Date();
+            const diffTime = expiry - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString();
+        }
+
+        function formatDateTime(dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            
+            // Set color based on type
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'error' ? 'bg-red-500' : 
+                type === 'warning' ? 'bg-yellow-500' : 
+                'bg-green-500'
+            } text-white`;
+            
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'985a05b5c6e7bcff',t:'MTc1ODk2NTg0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
